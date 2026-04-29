@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>踩地雷 - Minesweeper</title>
+    <style>
+        :root {
+            --bg-gray: #c0c0c0;
+            --light-gray: #ffffff;
+            --dark-gray: #808080;
+            --darker-gray: #404040;
+            --cell-size: 24px;
+            --blue-dark: #000080;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--bg-gray);
+            border: 3px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            padding: 6px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .title-bar {
+            background: var(--blue-dark);
+            color: white;
+            padding: 4px 8px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-bar button {
+            background: var(--bg-gray);
+            border: 1px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            width: 16px;
+            height: 14px;
+            font-size: 10px;
+            line-height: 12px;
+            cursor: pointer;
+        }
+
+        .menu {
+            background: var(--bg-gray);
+            padding: 4px;
+            border-bottom: 2px solid;
+            border-color: var(--dark-gray) var(--light-gray);
+        }
+
+        .menu button {
+            background: transparent;
+            border: none;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .menu button:hover {
+            background: var(--dark-gray);
+            color: white;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+            margin: 6px 0;
+        }
+
+        .counter {
+            background: black;
+            color: red;
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            font-weight: bold;
+            padding: 2px 6px;
+            min-width: 60px;
+            text-align: center;
+            border: 2px solid;
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+        }
+
+        .timer-mode {
+            display: flex;
+            gap: 4px;
+        }
+
+        .timer-mode button {
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .timer-mode button.active {
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+            background: #a0a0a0;
+        }
+
+        .face-btn {
+            width: 36px;
+            height: 36px;
+            font-size: 20px;
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .face-btn:active {
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+        }
+
+        .face-btn.winning {
+            animation: worry 0.3s infinite;
+        }
+
+        @keyframes worry {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .game-board {
+            border: 3px solid;
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+            display: inline-block;
+        }
+
+        .row {
+            display: flex;
+        }
+
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.05s;
+        }
+
+        .cell:hover {
+            background: #d0d0d0;
+        }
+
+        .cell:active {
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+        }
+
+        .cell.revealed {
+            background: #b0b0b0;
+            border: 1px solid #808080;
+            cursor: default;
+        }
+
+        .cell.revealed:active {
+            border-color: #808080;
+        }
+
+        .cell.mine {
+            background: #b0b0b0;
+        }
+
+        .cell.flagged::after {
+            content: '🚩';
+            font-size: 14px;
+        }
+
+        .cell.question::after {
+            content: '❓';
+            font-size: 14px;
+        }
+
+        .cell.mine-exploded {
+            background: red;
+            animation: flash 0.5s;
+        }
+
+        @keyframes flash {
+            0%, 100% { background: red; }
+            50% { background: #ff6666; }
+        }
+
+        .cell.mine-revealed::before {
+            content: '💣';
+            font-size: 14px;
+        }
+
+        .cell .num-1 { color: blue; }
+        .cell .num-2 { color: green; }
+        .cell .num-3 { color: red; }
+        .cell .num-4 { color: darkblue; }
+        .cell .num-5 { color: darkred; }
+        .cell .num-6 { color: teal; }
+        .cell .num-7 { color: black; }
+        .cell .num-8 { color: gray; }
+
+        .game-board.shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .difficulty-panel {
+            padding: 10px;
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+            margin-bottom: 6px;
+        }
+
+        .difficulty-panel h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .difficulty-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 4px 0;
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            cursor: pointer;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .difficulty-btn:active {
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+        }
+
+        .custom-panel {
+            padding: 10px;
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+            display: none;
+        }
+
+        .custom-panel.show {
+            display: block;
+        }
+
+        .custom-panel label {
+            display: block;
+            margin: 8px 0 4px;
+            font-size: 13px;
+        }
+
+        .custom-panel input {
+            width: 100%;
+            padding: 4px;
+            border: 2px solid;
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+        }
+
+        .custom-panel button {
+            margin-top: 10px;
+            padding: 6px 16px;
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            cursor: pointer;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .message-box {
+            background: var(--bg-gray);
+            border: 3px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            padding: 20px;
+            text-align: center;
+            min-width: 250px;
+        }
+
+        .message-box h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .message-box button {
+            margin-top: 15px;
+            padding: 6px 20px;
+            background: var(--bg-gray);
+            border: 2px solid;
+            border-color: var(--light-gray) var(--darker-gray) var(--darker-gray) var(--light-gray);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .message-box button:active {
+            border-color: var(--darker-gray) var(--light-gray) var(--light-gray) var(--darker-gray);
+        }
+
+        @media (max-width: 600px) {
+            :root {
+                --cell-size: 20px;
+            }
+            
+            .counter {
+                font-size: 20px;
+                min-width: 45px;
+            }
+            
+            .face-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            :root {
+                --cell-size: 16px;
+            }
+            
+            .counter {
+                font-size: 16px;
+                min-width: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title-bar">
+            <span>💣 踩地雷</span>
+            <button onclick="window.close()">×</button>
+        </div>
+        
+        <div class="menu">
+            <button onclick="showMenu()">檔案(F)</button>
+            <button onclick="showMenu()">遊戲(G)</button>
+            <button onclick="showMenu()">說明(H)</button>
+        </div>
+
+        <div id="menuOverlay" class="overlay">
+            <div class="message-box">
+                <h2>💣 踩地雷</h2>
+                <button class="difficulty-btn" onclick="startGame('beginner')">👶 初級 (9×9, 10 💣)</button>
+                <button class="difficulty-btn" onclick="startGame('advanced')">👹 高級 (16×16, 40 💣)</button>
+                <button class="difficulty-btn" onclick="showCustom()">⚙️ 自訂難度</button>
+                
+                <div id="customPanel" class="custom-panel">
+                    <label>寬度 (8-30): <input type="number" id="customWidth" value="16" min="8" max="30"></label>
+                    <label>高度 (8-24): <input type="number" id="customHeight" value="16" min="8" max="24"></label>
+                    <label>地雷數: <input type="number" id="customMines" value="40" min="1"></label>
+                    <label>倒數秒數: <input type="number" id="customTime" value="120" min="10"></label>
+                    <button onclick="startCustomGame()">開始遊戲</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="winOverlay" class="overlay hidden">
+            <div class="message-box">
+                <h2>🎉 恭喜獲勝！</h2>
+                <p id="winTime"></p>
+                <button onclick="showMenu()">再玩一次</button>
+            </div>
+        </div>
+
+        <div id="loseOverlay" class="overlay hidden">
+            <div class="message-box">
+                <h2>💥 爆炸了！</h2>
+                <p id="loseTime"></p>
+                <button onclick="showMenu()">重新開始</button>
+            </div>
+        </div>
+
+        <div class="game-header">
+            <div class="counter" id="mineCount">010</div>
+            
+            <div class="timer-mode">
+                <button id="countdownBtn" class="active" onclick="setTimerMode('countdown')">⏱️ 倒數</button>
+                <button id="stopwatchBtn" onclick="setTimerMode('stopwatch')">⏱️ 正數</button>
+            </div>
+            
+            <div class="face-btn" id="faceBtn" onclick="restartGame()">😊</div>
+            
+            <div class="counter" id="timer">000</div>
+        </div>
+
+        <div class="game-board" id="gameBoard"></div>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        let board = [];
+        let rows = 9;
+        let cols = 9;
+        let mineCount = 10;
+        let countdownTime = 60;
+        let flags = 0;
+        let gameOver = false;
+        let gameStarted = false;
+        let timerMode = 'countdown';
+        let timeRemaining = 60;
+        let timerInterval = null;
+        let heartbeatInterval = null;
+        let tickOscillator = null;
+
+        const difficulties = {
+            beginner: { rows: 9, cols: 9, mines: 10, time: 60 },
+            advanced: { rows: 16, cols: 16, mines: 40, time: 120 }
+        };
+
+        function showMenu() {
+            stopAudio();
+            document.getElementById('menuOverlay').classList.remove('hidden');
+            document.getElementById('winOverlay').classList.add('hidden');
+            document.getElementById('loseOverlay').classList.add('hidden');
+            document.getElementById('customPanel').classList.remove('show');
+        }
+
+        function showCustom() {
+            document.getElementById('customPanel').classList.add('show');
+        }
+
+        function startCustomGame() {
+            const width = parseInt(document.getElementById('customWidth').value);
+            const height = parseInt(document.getElementById('customHeight').value);
+            const mines = parseInt(document.getElementById('customMines').value);
+            const time = parseInt(document.getElementById('customTime').value);
+            
+            if (mines >= width * height) {
+                alert('地雷數不能超過格子總數！');
+                return;
+            }
+            
+            startGameWithParams(width, height, mines, time);
+        }
+
+        function startGame(difficulty) {
+            const config = difficulties[difficulty];
+            startGameWithParams(config.cols, config.rows, config.mines, config.time);
+        }
+
+        function startGameWithParams(colsVal, rowsVal, minesVal, timeVal) {
+            clearInterval(timerInterval);
+            clearInterval(heartbeatInterval);
+            timerInterval = null;
+            heartbeatInterval = null;
+            
+            stopAudio();
+            document.getElementById('menuOverlay').classList.add('hidden');
+            
+            cols = colsVal;
+            rows = rowsVal;
+            mineCount = minesVal;
+            countdownTime = timeVal;
+            timeRemaining = timeVal;
+            
+            board = Array(rows).fill(null).map(() => Array(cols).fill({ type: 'empty', revealed: false, flagged: false }));
+            flags = 0;
+            gameOver = false;
+            gameStarted = false;
+            
+            document.getElementById('mineCount').textContent = String(mineCount).padStart(3, '0');
+            document.getElementById('faceBtn').textContent = '😊';
+            
+            createBoard();
+            resetTimer();
+        }
+
+        function restartGame() {
+            startGameWithParams(cols, rows, mineCount, countdownTime);
+        }
+
+        function createBoard() {
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            gameBoard.classList.remove('shake');
+            
+            for (let y = 0; y < rows; y++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                
+                for (let x = 0; x < cols; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    
+                    cell.addEventListener('click', () => handleClick(x, y));
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        handleRightClick(x, y);
+                    });
+                    cell.addEventListener('mousedown', () => {
+                        if (!gameOver) document.getElementById('faceBtn').textContent = '😮';
+                    });
+                    cell.addEventListener('mouseup', () => {
+                        if (!gameOver) document.getElementById('faceBtn').textContent = '😊';
+                    });
+                    
+                    row.appendChild(cell);
+                }
+                
+                gameBoard.appendChild(row);
+            }
+        }
+
+        function placeMines(excludeX, excludeY) {
+            board = Array(rows).fill(null).map(() => Array(cols).fill({ type: 'empty', revealed: false }));
+            
+            let placed = 0;
+            while (placed < mineCount) {
+                const x = Math.floor(Math.random() * cols);
+                const y = Math.floor(Math.random() * rows);
+                
+                if (board[y][x].type === 'empty' && !(Math.abs(x - excludeX) <= 1 && Math.abs(y - excludeY) <= 1)) {
+                    board[y][x] = { type: 'mine', revealed: false };
+                    placed++;
+                }
+            }
+            
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (board[y][x].type !== 'mine') {
+                        board[y][x].count = countMines(x, y);
+                    }
+                }
+            }
+        }
+
+        function countMines(x, y) {
+            let count = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && board[ny][nx].type === 'mine') {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function handleClick(x, y) {
+            if (gameOver || board[y][x].flagged) return;
+            
+            if (!gameStarted) {
+                gameStarted = true;
+                placeMines(x, y);
+                startTimer();
+            }
+            
+            revealCell(x, y);
+        }
+
+        function handleRightClick(x, y) {
+            if (gameOver || board[y][x].revealed) return;
+            
+            const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+            
+            if (cell.classList.contains('flagged')) {
+                cell.classList.remove('flagged');
+                board[y][x].flagged = false;
+                flags--;
+            } else {
+                cell.classList.add('flagged');
+                board[y][x].flagged = true;
+                flags++;
+            }
+            
+            document.getElementById('mineCount').textContent = String(mineCount - flags).padStart(3, '0');
+        }
+
+        function revealCell(x, y) {
+            if (x < 0 || x >= cols || y < 0 || y >= rows) return;
+            if (board[y][x].revealed || board[y][x].flagged) return;
+            
+            const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+            board[y][x].revealed = true;
+            cell.classList.add('revealed');
+            
+            if (board[y][x].type === 'mine') {
+                cell.classList.add('mine-exploded');
+                triggerExplosion();
+                return;
+            }
+            
+            if (board[y][x].count > 0) {
+                cell.innerHTML = `<span class="num-${board[y][x].count}">${board[y][x].count}</span>`;
+            } else {
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        revealCell(x + dx, y + dy);
+                    }
+                }
+            }
+            
+            checkWin();
+        }
+
+        function checkWin() {
+            let revealed = 0;
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (board[y][x].revealed) revealed++;
+                }
+            }
+            
+            if (revealed === rows * cols - mineCount) {
+                victory();
+            }
+        }
+
+        function victory() {
+            gameOver = true;
+            stopAudio();
+            clearInterval(timerInterval);
+            clearInterval(heartbeatInterval);
+            
+            document.getElementById('faceBtn').textContent = '😎';
+            
+            let time;
+            if (timerMode === 'countdown') {
+                time = countdownTime - timeRemaining;
+            } else {
+                time = timeRemaining;
+            }
+            
+            document.getElementById('winTime').textContent = `完成時間: ${time} 秒`;
+            document.getElementById('winOverlay').classList.remove('hidden');
+            
+            playWinSound();
+        }
+
+        function triggerExplosion() {
+            gameOver = true;
+            stopAudio();
+            clearInterval(timerInterval);
+            clearInterval(heartbeatInterval);
+            
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.classList.add('shake');
+            
+            document.getElementById('faceBtn').textContent = '😵';
+            
+            playExplosionSound();
+            
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+                    
+                    if (board[y][x].type === 'mine' && !cell.classList.contains('mine-exploded')) {
+                        setTimeout(() => {
+                            cell.classList.add('mine-revealed', 'revealed');
+                        }, Math.random() * 500);
+                    }
+                }
+            }
+            
+            let time;
+            if (timerMode === 'countdown') {
+                time = countdownTime - timeRemaining;
+            } else {
+                time = timeRemaining;
+            }
+            
+            setTimeout(() => {
+                document.getElementById('loseTime').textContent = `堅持時間: ${time} 秒`;
+                document.getElementById('loseOverlay').classList.remove('hidden');
+            }, 1000);
+        }
+
+        function setTimerMode(mode) {
+            timerMode = mode;
+            document.getElementById('countdownBtn').classList.toggle('active', mode === 'countdown');
+            document.getElementById('stopwatchBtn').classList.toggle('active', mode === 'stopwatch');
+            resetTimer();
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            clearInterval(heartbeatInterval);
+            
+            if (timerMode === 'countdown') {
+                timeRemaining = countdownTime;
+                document.getElementById('timer').textContent = String(timeRemaining).padStart(3, '0');
+            } else {
+                timeRemaining = 0;
+                document.getElementById('timer').textContent = '000';
+            }
+        }
+
+        function startTimer() {
+            resetTimer();
+            
+            if (timerMode === 'countdown') {
+                timerInterval = setInterval(() => {
+                    timeRemaining--;
+                    document.getElementById('timer').textContent = String(timeRemaining).padStart(3, '0');
+                    
+                    if (timeRemaining <= 30 && timeRemaining > 0) {
+                        startHeartbeat();
+                    }
+                    
+                    if (timeRemaining <= 10 && timeRemaining > 0) {
+                        playTickSound();
+                    }
+                    
+                    if (timeRemaining <= 0) {
+                        triggerExplosion();
+                    }
+                }, 1000);
+            } else {
+                timerInterval = setInterval(() => {
+                    timeRemaining++;
+                    document.getElementById('timer').textContent = String(timeRemaining).padStart(3, '0');
+                }, 1000);
+            }
+        }
+
+        function playTickSound() {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.05);
+        }
+
+        function startHeartbeat() {
+            if (heartbeatInterval) return;
+            
+            let beatCount = 0;
+            const baseInterval = 600;
+            
+            heartbeatInterval = setInterval(() => {
+                playHeartbeatSound();
+                beatCount++;
+                
+                if (beatCount % 2 === 0 && baseInterval - beatCount * 20 > 200) {
+                    clearInterval(heartbeatInterval);
+                    startHeartbeat();
+                }
+            }, baseInterval);
+        }
+
+        function playHeartbeatSound() {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.value = 60;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playExplosionSound() {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.value = 100;
+            oscillator.type = 'sawtooth';
+            
+            gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        }
+
+        function playWinSound() {
+            const notes = [523, 659, 784, 1047];
+            notes.forEach((freq, i) => {
+                setTimeout(() => {
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.frequency.value = freq;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.3);
+                }, i * 150);
+            });
+        }
+
+        function stopAudio() {
+            clearInterval(heartbeatInterval);
+            heartbeatInterval = null;
+        }
+
+        showMenu();
+    </script>
+</body>
+</html>
