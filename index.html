@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="極致美學的互動拼圖遊戲，擁有三種難度選擇、AI 生成的精美桌布、即時 Web Audio 氛圍音樂與音效、精準計時器、以及本機排行榜。支援自訂圖片上傳！">
+    <title>極光拼圖工坊 - Aurora Jigsaw Studio</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Canvas for futuristic network particle effect -->
+    <canvas id="bg-particles" class="bg-particles"></canvas>
+    
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar-panel glass-panel">
+            <div class="brand">
+                <div class="brand-logo"><i class="fa-solid fa-puzzle-piece"></i></div>
+                <div class="brand-text">
+                    <h1>極光拼圖</h1>
+                    <span>AURORA JIGSAW</span>
+                </div>
+            </div>
+            
+            <hr class="panel-divider">
+            
+            <!-- Game Controls -->
+            <div class="control-group">
+                <label class="group-title"><i class="fa-solid fa-sliders"></i> 遊戲設定</label>
+                
+                <!-- Difficulty Selection -->
+                <div class="setting-item">
+                    <span class="setting-label">選擇難度</span>
+                    <div class="difficulty-picker">
+                        <button type="button" id="diff-easy" class="btn-diff active" data-difficulty="easy">
+                            <span class="diff-title">簡單</span>
+                            <span class="diff-grid">3 × 3</span>
+                        </button>
+                        <button type="button" id="diff-medium" class="btn-diff" data-difficulty="medium">
+                            <span class="diff-title">中等</span>
+                            <span class="diff-grid">4 × 4</span>
+                        </button>
+                        <button type="button" id="diff-hard" class="btn-diff" data-difficulty="hard">
+                            <span class="diff-title">困難</span>
+                            <span class="diff-grid">5 × 5</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Audio Panel -->
+            <div class="control-group">
+                <label class="group-title"><i class="fa-solid fa-volume-high"></i> 氛圍音樂</label>
+                <div class="audio-control-card glass-card">
+                    <div class="audio-toggle-row">
+                        <span class="music-info"><i class="fa-solid fa-compact-disc fa-spin"></i> 療癒電子氛圍 BGM</span>
+                        <button type="button" id="btn-toggle-music" class="btn-icon" aria-label="切換音樂">
+                            <i class="fa-solid fa-play"></i>
+                        </button>
+                    </div>
+                    <div class="volume-slider-row">
+                        <i class="fa-solid fa-volume-low"></i>
+                        <input type="range" id="volume-slider" min="0" max="100" value="40" class="neon-slider" aria-label="音量控制">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preset Images -->
+            <div class="control-group">
+                <label class="group-title"><i class="fa-solid fa-images"></i> 選擇拼圖面板</label>
+                <div class="image-gallery">
+                    <div class="gallery-item active" data-image="nature" id="img-preset-nature">
+                        <div class="img-preview nature-bg"></div>
+                        <span class="img-label">奇幻森林</span>
+                    </div>
+                    <div class="gallery-item" data-image="synthwave" id="img-preset-synthwave">
+                        <div class="img-preview synthwave-bg"></div>
+                        <span class="img-label">復古霓虹</span>
+                    </div>
+                    <div class="gallery-item" data-image="cyberpunk" id="img-preset-cyberpunk">
+                        <div class="img-preview cyberpunk-bg"></div>
+                        <span class="img-label">賽博朋克</span>
+                    </div>
+                </div>
+                
+                <!-- Custom Upload -->
+                <div class="upload-area" id="drop-zone">
+                    <input type="file" id="file-uploader" accept="image/*" class="file-input">
+                    <label for="file-uploader" class="upload-label">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>上傳自訂圖片</span>
+                        <span class="upload-subtext">拖放或點擊此處</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Leaderboard Button -->
+            <button type="button" id="btn-show-scores" class="btn-secondary w-full">
+                <i class="fa-solid fa-trophy"></i> 檢視本機排行榜
+            </button>
+        </aside>
+        
+        <!-- Main Game Table -->
+        <main class="game-area">
+            <!-- Top Dashboard -->
+            <header class="dashboard glass-panel">
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-regular fa-clock"></i> 時間</span>
+                    <span id="timer-display" class="stat-value">00:00</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-solid fa-shoe-prints"></i> 步數</span>
+                    <span id="moves-display" class="stat-value">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label"><i class="fa-solid fa-percent"></i> 進度</span>
+                    <div class="progress-container">
+                        <span id="progress-text" class="stat-value">0%</span>
+                        <div class="progress-bar-bg">
+                            <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="button" id="btn-peek" class="btn-action" title="預覽原圖">
+                        <i class="fa-regular fa-eye"></i> <span>預覽</span>
+                    </button>
+                    <button type="button" id="btn-restart" class="btn-primary" title="重新開始">
+                        <i class="fa-solid fa-rotate-left"></i> <span>重置</span>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Game Workspace -->
+            <div id="puzzle-table" class="puzzle-table">
+                <!-- Grid Target Board -->
+                <div id="puzzle-board" class="puzzle-board glass-panel">
+                    <div id="board-grid-overlay" class="board-grid-overlay"></div>
+                    <!-- Faint reference image shown on hover/peek -->
+                    <img id="board-preview-img" src="" alt="拼圖預覽" class="board-preview-img">
+                    <div id="board-placeholder" class="board-placeholder">
+                        <i class="fa-solid fa-puzzle-piece fa-fade"></i>
+                        <p>載入中...</p>
+                    </div>
+                </div>
+                
+                <!-- Scattered pieces will be dynamically spawned here -->
+            </div>
+        </main>
+    </div>
+    
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal-overlay">
+        <div class="modal-content glass-panel animate-scale-in">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-trophy"></i> 排行榜紀錄</h2>
+                <button type="button" id="btn-close-modal" class="btn-icon" aria-label="關閉視窗">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-tabs">
+                <button type="button" id="tab-easy" class="tab-btn active" data-tab="easy">簡單 (3x3)</button>
+                <button type="button" id="tab-medium" class="tab-btn" data-tab="medium">中等 (4x4)</button>
+                <button type="button" id="tab-hard" class="tab-btn" data-tab="hard">困難 (5x5)</button>
+            </div>
+            <div class="modal-body">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>名次</th>
+                            <th>玩家</th>
+                            <th>時間</th>
+                            <th>步數</th>
+                            <th>日期</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-tbody">
+                        <!-- Dynamic scores -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Victory Modal -->
+    <div id="victory-modal" class="modal-overlay">
+        <div class="modal-content glass-panel victory-card animate-scale-in">
+            <div class="victory-decor">
+                <i class="fa-solid fa-circle-check victory-icon"></i>
+            </div>
+            <h2>恭喜通關！</h2>
+            <p class="victory-subtitle">你完成了一個精美拼圖！</p>
+            
+            <div class="victory-stats">
+                <div class="v-stat">
+                    <span class="v-label">完成難度</span>
+                    <span id="v-difficulty" class="v-val">中等 (4x4)</span>
+                </div>
+                <div class="v-stat">
+                    <span class="v-label">花費時間</span>
+                    <span id="v-time" class="v-val">01:45</span>
+                </div>
+                <div class="v-stat">
+                    <span class="v-label">移動步數</span>
+                    <span id="v-moves" class="v-val">42 步</span>
+                </div>
+            </div>
+            
+            <!-- Record Name Form -->
+            <div id="record-form" class="record-form">
+                <label for="player-name-input">留下你的大名載入史冊：</label>
+                <div class="input-row">
+                    <input type="text" id="player-name-input" maxlength="15" placeholder="輸入玩家暱稱..." value="無名勇士">
+                    <button type="button" id="btn-submit-score" class="btn-primary">儲存紀錄</button>
+                </div>
+            </div>
+            
+            <div class="victory-actions">
+                <button type="button" id="btn-victory-close" class="btn-secondary">返回遊戲</button>
+                <button type="button" id="btn-play-again" class="btn-primary">再玩一次</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Canvas for victory confetti -->
+    <canvas id="victory-confetti" class="victory-confetti"></canvas>
+
+    <!-- Main Game Script -->
+    <script src="app.js"></script>
+</body>
+</html>
